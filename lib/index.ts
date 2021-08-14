@@ -1,34 +1,57 @@
-import * as ts_module from "../node_modules/typescript/lib/tsserverlibrary";
+import * as ts_module from "typescript/lib/tsserverlibrary";
 
 function init(modules: { typescript: typeof ts_module }) {
     const ts = modules.typescript;
 
     function create(info: ts.server.PluginCreateInfo) {
 
+        let order = {};
+
+        order[ts_module.ScriptElementKind.functionElement] = "zzz";
+        order[ts_module.ScriptElementKind.localFunctionElement] = "zz";
+        order[ts_module.ScriptElementKind.memberFunctionElement] = "z";
+        order[ts_module.ScriptElementKind.callSignatureElement] = "z";
+        order[ts_module.ScriptElementKind.callSignatureElement] = "z";
+
         // Diagnostic logging
-        info.project.projectService.logger.info(`Plugin "ts-sort-intelisense" loaded correctly`);
+        info.project.projectService.logger.info(`Plugin "ts-sort-intelisense" local loaded correctly`);
 
         // Set up decorator
         const proxy = Object.create(null) as ts.LanguageService;
         const oldLS = info.languageService;
         for (const k in oldLS) {
-            (<any>proxy)[k] = function () {
+            proxy[k] = function () {
                 return oldLS[k].apply(oldLS, arguments);
             }
         }
 
-        // Remove specified entries from completion list
         proxy.getCompletionsAtPosition = (fileName, position) => {
-            const prior = info.languageService.getCompletionsAtPosition(fileName, position, {});
-            const oldLength = prior.entries.length;
+            const prior = info.languageService.getCompletionsAtPosition(fileName, position, {})
+                || <ts_module.WithMetadata<ts_module.CompletionInfo>>{
+                    entries: [],
+                    isGlobalCompletion: false,
+                    isMemberCompletion: true,
+                };
+
             prior.entries = prior.entries.sort((a, b) => {
                 return ('' + a.kind).localeCompare(b.kind);
-            })
+            });
 
-            // Sample logging for diagnostic purposes
-            // if (oldLength !== prior.entries.length) {
-            //     info.project.projectService.logger.info(`Removed ${oldLength - prior.entries.length} entries from the completion list`);
-            // }
+            prior.entries = prior.entries.map(x => (x.sortText = order[x.kind] ?? x.kind, x));
+
+            prior.entries.push(<ts_module.CompletionEntry>{
+                kind: ts_module.ScriptElementKind.memberFunctionElement,
+                insertText: 'g()',
+                name: 'g',
+                sortText: '_',
+            });
+
+            prior.entries.push(<ts_module.CompletionEntry>{
+                kind: ts_module.ScriptElementKind.memberFunctionElement,
+                insertText: 's()',
+                name: 's',
+                sortText: '_',
+            });
 
             return prior;
         };
