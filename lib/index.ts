@@ -37,20 +37,29 @@ function init(modules: { typescript: typeof ts_module }) {
                 return ('' + a.kind).localeCompare(b.kind);
             });
 
-            prior.entries = prior.entries.map(x => (x.sortText = order[x.kind] ?? x.kind, x));
+            prior.entries = prior.entries.map(x => {
+                x.sortText = order[x.kind] ?? x.kind;
+                if (x.kind == "property") {
+                    x.sortText = '_';
+                }
+                if (x.kind == "method") {
+                    x.sortText = '__';
+                }
+                return x;
+            });
 
             prior.entries.push(<ts_module.CompletionEntry>{
                 kind: ts_module.ScriptElementKind.memberFunctionElement,
                 insertText: 'g()',
                 name: 'g',
-                sortText: '_',
+                sortText: '_a',
             });
 
             prior.entries.push(<ts_module.CompletionEntry>{
                 kind: ts_module.ScriptElementKind.memberFunctionElement,
                 insertText: 's()',
                 name: 's',
-                sortText: '_',
+                sortText: '_a',
             });
 
             return prior;
